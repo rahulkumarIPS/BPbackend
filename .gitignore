@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.swp
+*.bak
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Django stuff
+*.log
+staticfiles/
+media/
+local_settings.py
+
+# SQLite (if used locally)
+db.sqlite3
+
+# VSCode
+.vscode/
+
+# ENV files
+.env
+.env.*
+*.env
+
+# Byte-compiled / optimized / DLL files
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Pytest cache
+.pytest_cache/
+
+# Migrations (Optional: ignore only if you don't want them in git)
+# **But for production you SHOULD commit migrations**
+# */migrations/*
+# !*/migrations/__init__.py
+
+# IDE files
+.idea/
+*.iml
+
+# Node modules (only if using npm for frontend inside Django)
+node_modules/
+
+# Build
+build/
+dist/
+
+# Cache
+*.cache
+*.DS_Store
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
