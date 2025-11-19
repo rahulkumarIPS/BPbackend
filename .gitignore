@@ -37,6 +37,9 @@ db.sqlite3
 # Pytest cache
 .pytest_cache/
 
+
+# Django migrations (if uncommented, will ignore all migration files from project)
+
 # Migrations (Optional: ignore only if you don't want them in git)
 # **But for production you SHOULD commit migrations**
 # */migrations/*
