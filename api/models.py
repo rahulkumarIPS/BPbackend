@@ -18,7 +18,7 @@ BOOKING_STATUS = (
 )
 
 class Location(models.Model):
-    name = models.CharField(max_length=255)     # e.g. "Andheri East"
+    name = models.CharField(max_length=255)     
     pincode = models.CharField(max_length=20, blank=True, null=True)
     lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -32,6 +32,9 @@ class Site(models.Model):
     name = models.CharField(max_length=255)  # site name
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='sites')
     address = models.TextField(blank=True)
+    pincode = models.CharField(max_length=20, blank=True, null=True)
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     total_slots_car = models.IntegerField(default=0)
     total_slots_bike = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -74,7 +77,7 @@ class OptionalCharge(models.Model):
 
 class Booking(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='api_bookings')
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
     vehicle_type = models.CharField(max_length=10, choices=VEHICLE_CHOICES)
     slot_number = models.CharField(max_length=50, blank=True, null=True)

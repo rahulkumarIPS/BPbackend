@@ -1,10 +1,12 @@
 from rest_framework import viewsets, generics, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from .models import Site, Booking, OptionalCharge
-from .serializers import SiteSerializer, BookingSerializer
+from .models import Site, Location, Booking, OptionalCharge
+from .serializers import SiteSerializer, BookingSerializer, SiteCreateSerializer
 from .utils import calculate_amount
 from .razorpay_client import client
 import razorpay
@@ -23,6 +25,61 @@ def search_sites(request):
     if pincode:
         qs = qs.filter(location__pincode__icontains=pincode)
     serializer = SiteSerializer(qs, many=True)
+    return Response(serializer.data)
+
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+@api_view(['POST'])
+def create_site(request):
+    """
+    Create a new parking site with location details embedded.
+    body: {
+        "site_name": "Site Name",
+        "address": "Full address",
+        "total_slots_car": 50,
+        "total_slots_bike": 100,
+        "location_name": "Andheri East",
+        "pincode": "400069",
+        "lat": 19.1136,
+        "lng": 72.8697
+    }
+    """
+    try:
+        data = request.data
+        # Check for duplicate site (location is a related object)
+        location = Location.objects.filter(
+            name=data.get('location_name'),
+            pincode=data.get('pincode'),
+            lat=data.get('lat'),
+            lng=data.get('lng')
+        ).first()
+        if location:
+            duplicate = Site.objects.filter(
+                name=data.get('site_name'),
+                address=data.get('address'),
+                total_slots_car=data.get('total_slots_car'),
+                total_slots_bike=data.get('total_slots_bike'),
+                location=location
+            ).first()
+            if duplicate:
+                return Response({'detail': 'Site with these details already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SiteCreateSerializer(data=data)
+        if serializer.is_valid():
+            site = serializer.save()
+            response_serializer = SiteSerializer(site)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def list_sites(request):
+    """
+    List all sites for admin management.
+    """
+    sites = Site.objects.select_related('location').all()
+    serializer = SiteSerializer(sites, many=True)
     return Response(serializer.data)
 
 @api_view(['POST'])
@@ -110,3 +167,49 @@ def verify_payment(request):
     send_booking_notifications.delay(str(booking.id))
 
     return Response({'detail': 'Payment verified and booking confirmed.'})
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def create_pricing(request):
+    """
+    Create pricing for a site.
+    body: {
+        "site_id": 1,
+        "vehicle_type": "car",
+        "tier": "0_2",
+        "price": 60.00
+    }
+    """
+    from .serializers import PricingSerializer
+    try:
+        data = request.data.copy()
+        serializer = PricingSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def create_optional_charge(request):
+    """
+    Create an optional charge.
+    body: {
+        "site_id": 1,
+        "name": "Valet Parking",
+        "amount": 50.00,
+        "is_active": true
+    }
+    """
+    from .serializers import OptionalChargeSerializer
+    try:
+        data = request.data.copy()
+        serializer = OptionalChargeSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
